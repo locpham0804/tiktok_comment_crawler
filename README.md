@@ -30,7 +30,7 @@ docker-compose up -d
 Install dependencies
 
 ```
-cd Crawl-Comment-Tiktok
+cd python
 pip install -r requirements.txt
 ```
 
