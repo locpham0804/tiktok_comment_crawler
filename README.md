@@ -10,7 +10,7 @@ In this project, we use these technologies:
 - Docker (for fast build and test)
 
 Diagrams for pipeline:
-
+![etl](/python/assets/etl.png)
 
 ## Features
 
