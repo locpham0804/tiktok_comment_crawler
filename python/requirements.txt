@@ -1,0 +1,4 @@
+TikTokLive
+sqlalchemy
+psycopg2
+confluent_kafka[avro]
