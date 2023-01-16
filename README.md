@@ -97,4 +97,14 @@ At this point, use select SQL to check for data has been pushed to clickhouse
 SELECT count() FROM tiktok;
 ```
 
-For Debezium connector, 
+For Debezium connector, first we need to create debezium connector to capture data change for specific table in postgres. Open a terminal in root dicrectory and run:
+```
+curl -i -X POST -H "Accept:Application/json" -H "Content-Type:application/json" 127.0.0.1:8083/connectors/ --data "@debezium.json"
+```
+The connector has been created. Now everytime "tiktokcomment" table in postgres has an update, the update information will send to kafka under topic "postgres.public.tiktokcomment"
+
+Continue to run a terminal with this command to monitor data to check synchronize between kafka and postgres.
+```
+python3 kafka_consumer.py
+```
+
