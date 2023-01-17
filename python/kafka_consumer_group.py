@@ -8,7 +8,7 @@ def consume():
     consumer = KafkaConsumer('raw_comment_tiktok',
                             group_id = 'tiktok_consumer_group',
                             bootstrap_servers = '192.168.100.14:9092',
-                            auto_offset_reset='earliest')
+                            auto_offset_reset='latest')
     print('Kafka consumer connected')
     
     # Create engine connect to postgresql
@@ -38,25 +38,18 @@ def consume():
         print ("%s:%d:%d: key=%s value=%s" % (message.topic, message.partition,
                                             message.offset, message.key,
                                             message.value.decode('utf-8')))
-        
-        # userId = data.userId
-        # uniqueId = data.uniqueId
-        # nickname = data.nickname
-        # followRole = data.followRole
-        # comment = data.comment
-        # liveUser = data.live_User_unique_Id
-        # timeCreate = data.time_created
-        print(data)
-        
-        with engine.connect() as con:
-            statement = text("""
-                            INSERT INTO tiktokcomment(user_Id, unique_Id, nickname, follow_Role, comment, live_User_unique_Id, time_created) 
-                            VALUES(:user_Id, :unique_Id, :nickname, :follow_Role, :comment, :live_User_unique_Id, :time_created)
-                            """)
-            con.execute(statement, json.loads(data))
-            con.close()
+        try:
+            with engine.connect() as con:
+                statement = text("""
+                                INSERT INTO tiktokcomment(user_Id, unique_Id, nickname, follow_Role, comment, live_User_unique_Id, time_created) 
+                                VALUES(:user_Id, :unique_Id, :nickname, :follow_Role, :comment, :live_User_unique_Id, :time_created)
+                                """)
+                con.execute(statement, json.loads(data))
+                con.close()
+        except:
+            continue
     
 if __name__ == '__main__':
-        # Run the client and block the main thread
+    # Run the client and block the main thread
     # await client.start() to run non-blocking
     consume()

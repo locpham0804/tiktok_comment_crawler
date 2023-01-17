@@ -1,49 +1,93 @@
 # Import KafkaConsumer from Kafka library
-from kafka import KafkaConsumer
-from confluent_kafka.avro import AvroConsumer
+from kafka import KafkaConsumer, TopicPartition
+import json
+from datetime import datetime, timezone
 
 
 # Import sys module
 import sys
 
-def consume_record():
-    default_group_name = "default-consumer-group"
-    consumer_config = {"bootstrap.servers": '192.168.100.14:9092',
-                       "schema.registry.url": 'http://192.168.100.14:8081',
-                       "group.id": default_group_name,}
+def consume_debezium_record():
+    # prepare consumer
+    topic = 'postgres.public.tiktokcomment'
+    tp = TopicPartition(topic,0)
+    consumer = KafkaConsumer(group_id = 'consumer-group_monitor',
+                             bootstrap_servers = '192.168.100.14:9092',
+                             auto_offset_reset='latest')
+    consumer.assign([tp])
+    consumer.seek_to_beginning(tp)
     
-    consumer = AvroConsumer(consumer_config)
+    # obtain the last offset value
+    lastOffset = consumer.end_offsets([tp])[tp]
     
-    consumer.subscribe(['postgres.public.tiktokcomment'])
+    print('start check postgres topic tiktokcomment')
     
-    running = True
+    insert_count = 0
     
-    while running:
-        message = consumer.poll()
-        if message:
-            print(f"Successfully poll a record from "
-                      f"Kafka topic: {message.topic()}, partition: {message.partition()}, offset: {message.offset()}\n"
-                      f"message key: {message.key()} || message value: {message.value()}")
-            consumer.commit()
+    for message in consumer:
+    ## Filter "insert-type" change from table
+        data = message.value.decode('utf-8')
+        if json.loads(data)['payload']['before'] is None and json.loads(data)['payload']['after'] is not None:
+            monitor_row = json.loads(data)['payload']['after']
+            print(monitor_row)
+            insert_count += 1
+            if message.offset == lastOffset - 1:
+                break
+            else: continue
         else:
-            print(message.error())
-            consumer.close()
-            running = False
+            if message.offset == lastOffset - 1:
+                break
+            else: continue
     
-    # try:
-    #     message = consumer.poll()
-    # except Exception as e:
-    #     print(f"Exception while trying to poll messages - {e}")
-    # else:
-    #     if message:
-    #         print(f"Successfully poll a record from "
-    #               f"Kafka topic: {message.topic()}, partition: {message.partition()}, offset: {message.offset()}\n"
-    #               f"message key: {message.key()} || message value: {message.value()}")
-    #         consumer.commit()
-    #     else:
-    #         print("No new messages at this point. Try again later.")
+    return insert_count
 
-    # consumer.close()
+def consume_kafka_topic_record():
+    # prepare consumer
+    topic = 'raw_comment_tiktok'
+    tp = TopicPartition(topic,0)
+    consumer_postgres = KafkaConsumer(group_id = 'tiktok_consumer_group_monitor',
+                        bootstrap_servers = '192.168.100.14:9092',
+                        auto_offset_reset='latest')
+    consumer_postgres.assign([tp])
+    consumer_postgres.seek_to_beginning(tp)
+    
+    print('start check kafka topic raw_comment_tiktok')
+    
+    # obtain the last offset value
+    lastOffset = consumer_postgres.end_offsets([tp])[tp]
+    
+    kafka_topic_messages_count = 0
+    
+    for message in consumer_postgres:
+        data = message.value.decode('utf-8')
+        print ("%s:%d:%d: key=%s value=%s" % (message.topic, message.partition,
+                                            message.offset, message.key,
+                                            message.value.decode('utf-8')))
+        print('start checking')
+        try:
+            time_check = json.loads(data)['time_created']
+            print(time_check)
+            kafka_topic_messages_count += 1
+            if message.offset == lastOffset - 1:
+                break
+            else: continue
+        except:
+            if message.offset == lastOffset - 1:
+                break
+            else: continue
+    
+    return kafka_topic_messages_count
+
+def consume_record():
+                
+    check_row = consume_debezium_record()
+    check_message = consume_kafka_topic_record()
+    print(f'row_insert: {check_row}')
+    print(f'message_count: {check_message}')
+    if check_row == check_message:
+        print('Matched')
+    else:
+        print('Unmatched')
     
 if __name__ == "__main__":
     consume_record()
