@@ -41,6 +41,7 @@ Inside the python directory, open a terminal and run:
 python3 kafka_producer.py "<unique_name_tiktok_live>"
 ```
 You can get "unique_name_tiktok_live" from tiktok live like this picture:
+![etl](/python/assets/tiktok_unique_name.png)
 
 The comment is produce and store in kafka topic "raw_comment_tiktok"
 Next, open another terminal and run:
@@ -103,8 +104,7 @@ curl -i -X POST -H "Accept:Application/json" -H "Content-Type:application/json" 
 ```
 The connector has been created. Now everytime "tiktokcomment" table in postgres has an update, the update information will send to kafka under topic "postgres.public.tiktokcomment"
 
-Continue to run a terminal with this command to monitor data to check synchronize between kafka and postgres.
+After the live is ended, continue to run a terminal with this command to monitor data to check synchronize between kafka and postgres.
 ```
 python3 kafka_consumer.py
 ```
-
