@@ -10,7 +10,7 @@ In this project, we use these technologies:
 - Docker (for fast build and test)
 
 Diagrams for pipeline:
-
+![etl](/python/assets/etl.png)
 
 ## Features
 
@@ -30,7 +30,7 @@ docker-compose up -d
 Install dependencies
 
 ```
-cd Crawl-Comment-Tiktok
+cd python
 pip install -r requirements.txt
 ```
 
@@ -80,7 +80,7 @@ SETTINGS kafka_broker_list = 'kafka:29092',
        kafka_format = 'JSONEachRow';
 ```
 ```
-CREATE MATERIALIZED VIEW kafka_consume_tiktok_comment_mv TO tiktok AS
+CREATE MATERIALIZED VIEW kafka_consume_tiktok_comment_mv TO tiktokcomment AS
 SELECT 
     user_Id,
     unique_Id,
@@ -94,7 +94,17 @@ FROM kafka_consume_tiktok_comment;
 
 At this point, use select SQL to check for data has been pushed to clickhouse
 ```
-SELECT count() FROM tiktok;
+SELECT count() FROM tiktokcomment;
 ```
 
-For Debezium connector, 
+For Debezium connector, first we need to create debezium connector to capture data change for specific table in postgres. Open a terminal in root dicrectory and run:
+```
+curl -i -X POST -H "Accept:Application/json" -H "Content-Type:application/json" 127.0.0.1:8083/connectors/ --data "@debezium.json"
+```
+The connector has been created. Now everytime "tiktokcomment" table in postgres has an update, the update information will send to kafka under topic "postgres.public.tiktokcomment"
+
+Continue to run a terminal with this command to monitor data to check synchronize between kafka and postgres.
+```
+python3 kafka_consumer.py
+```
+
